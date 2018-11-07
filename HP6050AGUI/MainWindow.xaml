@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -29,11 +30,29 @@
         <!--Top Right Configuration panel-->
         <GroupBox Grid.Row="0"
                   Grid.Column="1"
-                  Header="Test Configuration">
+                  Header="Tests">
             <Grid>
-                <Label Content="Configuration settings here"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"/>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Vertical">
+                    <Button x:Name="quickTestBtn"
+                            Margin="0,5,0,0"
+                            Content="Start Quick Test"/>
+                    <Button x:Name="slowDischargeBtn"
+                            Margin="0,5,0,0"
+                            Content="Start Slow Discharge Test"/>
+                    <Button x:Name="stressTestBtn"
+                            Margin="0,5,0,0"
+                            Content="Start Stress Test"/>
+                </StackPanel>
+                <Button Grid.Row="1"
+                        IsEnabled="False"
+                        x:Name="cancelTestBtn"
+                        Content="STOP TEST"
+                        Foreground="Red"
+                        FontWeight="Bold"/>
             </Grid>
         </GroupBox>
         <!--Bottom logging panel-->
@@ -44,23 +63,14 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="auto"/>
+                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Label Content="Duration (seconds):" Margin="0,0,2,2"/>
-                <TextBox Grid.Column="1"
-                         x:Name="durationBox"
-                         PreviewTextInput="NumberValidationTextBox" Margin="2,0,2,2"/>
-                <Button Grid.Column="2"
-                        Grid.ColumnSpan="3"
-                        x:Name="startLogButton"
-                        Content="Start Logging" Margin="2,0,0,2"/>
                 <TextBox Grid.Row="1"
                          Grid.ColumnSpan="3"
                          x:Name="pathBox"
@@ -75,5 +85,13 @@
                         Content="Save" Margin="2,2,0,0"/>
             </Grid>
         </GroupBox>
+        <Label VerticalAlignment="Bottom"
+               Grid.Row="2"
+               x:Name="statusLabel"
+               Margin="0"
+               Padding="0"
+               FontWeight="Bold"
+               FontSize="10"
+               Content="Test"/>
     </Grid>
 </Window>
