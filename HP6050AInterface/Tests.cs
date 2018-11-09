@@ -10,9 +10,12 @@ namespace HP6050AInterface {
     /// Basic test interface. Implement to create a test
     /// </summary>
     public interface ITest {
-        string getCommands();
+        string getScript();
     }
 
+    /// <summary>
+    /// A test for a battery (or a set of batteries)
+    /// </summary>
     public class BatteryTest : ITest {
 
         // Properties specific to a battery test
@@ -32,12 +35,13 @@ namespace HP6050AInterface {
             this.dischargeRate = dischargeRate;
         }
 
-        public string getCommands() {
+        public string getScript() {
             StringBuilder builder = new StringBuilder();
 
             // Set eodvoltage, cellcount, and dischargerate
-            builder.Append(String.Format("Eodv={0}", eodVoltage)); //TODO: append newline
+            builder.AppendFormat("Eodv={0}\n", eodVoltage);
 
+            return builder.ToString();
         }
 
     }
