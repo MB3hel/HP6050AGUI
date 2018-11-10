@@ -6,19 +6,6 @@ A simple GUI to run tests with a HP6050A Electronic load.
 ### NI VisaNS driver and .Net API
 The NI VisaNS driver is used to communicate with the electronic load via GPIB (or via an adapter).
 
-Install the driver from [here](https://www.ni.com/visa/).
+Install the driver from [here](https://www.ni.com/visa/). Be sure to download the `Ni-VISA...Runtime` package **NOT** the runtime package. The full package is needed.
 
-Make sure to install the `.Net 4.5 Runtime Support (NS)` and `.Net 4.0 Runtime Support (NS)`.
-
-### Install NI-488.2 driver
-http://sine.ni.com/psp/app/doc/p/id/psp-356/lang/en
-Be sure to install .Net API support
-
-## The project
-The project is separated into two parts: an interface library, and the GUI. The interface library is used to communciate with the device and define tests/handle output from the device. The GUI is used to start different tests.
-
-### GUI
-The GUI allows starting of predefined tests for certain types of batteries (used by FRC teams).
-
-## Interface Library
-The interface libary handles communication with the load (using NI VisaNS), configuring of tests, and parsing output form the load.
+Make sure to install the `.Net 4.0 - 4.5.1 Runtime Support (IVI)` component. Under `Development Support` make sure `.Net 4.0 - 4.5.1 Development Support (IVI)` is selected.

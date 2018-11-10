@@ -5,38 +5,41 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:HP6050AGUI"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="BatteryTester" Height="350" Width="500">
     <Grid Margin="5">
         <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="openSession"
+                    Content="Open Session"
+                    Click="openSession_Click"
+                    Margin="2"/>
+            <Button Grid.Column="1"
+                    x:Name="closeSession"
+                    Content="Close Session"
+                    IsEnabled="False"
+                    Click="closeSession_Click"
+                    Margin="2"/>
+        </Grid>
         
-        <!--Top Left Communuication panel-->
-        <GroupBox Grid.Row="0"
-                  Grid.Column="0"
-                  Header="Communication">
-            <Grid>
-                <Label Content="Communication settings here"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"/>
-            </Grid>
-        </GroupBox>
         <!--Top Right Configuration panel-->
-        <GroupBox Grid.Row="0"
-                  Grid.Column="1"
+        <GroupBox Grid.Row="1"
                   Header="Tests">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
-                <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Vertical"
+                            IsEnabled="False">
                     <Button x:Name="quickTestBtn"
                             Margin="0,5,0,0"
                             Content="Start Quick Test"/>
@@ -47,7 +50,7 @@
                             Margin="0,5,0,0"
                             Content="Start Stress Test"/>
                 </StackPanel>
-                <Button Grid.Row="1"
+                <Button Grid.Row="2"
                         IsEnabled="False"
                         x:Name="cancelTestBtn"
                         Content="STOP TEST"
@@ -56,9 +59,7 @@
             </Grid>
         </GroupBox>
         <!--Bottom logging panel-->
-        <GroupBox Grid.Row="1"
-                  Grid.Column="0"
-                  Grid.ColumnSpan="2"
+        <GroupBox Grid.Row="2"
                   Header="Logging">
             <Grid>
                 <Grid.RowDefinitions>
@@ -85,13 +86,5 @@
                         Content="Save" Margin="2,2,0,0"/>
             </Grid>
         </GroupBox>
-        <Label VerticalAlignment="Bottom"
-               Grid.Row="2"
-               x:Name="statusLabel"
-               Margin="0"
-               Padding="0"
-               FontWeight="Bold"
-               FontSize="10"
-               Content="Test"/>
     </Grid>
 </Window>

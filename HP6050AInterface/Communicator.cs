@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NationalInstruments.Visa;
 
 namespace HP6050AInterface {
 
@@ -11,13 +12,37 @@ namespace HP6050AInterface {
     /// </summary>
     public class Communicator {
 
+        MessageBasedSession mbSession;
+
         /// <summary>
         /// Start communication with the load
         /// </summary>
         /// <param name="gpibAdapter">Which gpib adapter to open communication on</param>
         /// <param name="insturmentAddress">The address of the load</param>
-        public Communicator(int gpibAdapter, int insturmentAddress) {
+        public void open(string resourceName) {
+            if (mbSession != null)
+                close(); // Close first
+            using (var rmSession = new ResourceManager()) {
+                try {
+                    mbSession = (MessageBasedSession)rmSession.Open(resourceName);
+                } catch (InvalidCastException) {
+                    throw new InvalidOperationException("Tried to open a message-based sesssion for a non message-based resource.");
+                }
+            }
+        }
 
+        /// <summary>
+        /// Close an open session
+        /// </summary>
+        void close() {
+            if (mbSession != null) {
+                mbSession.Dispose();
+                mbSession = null;
+            }
+        }
+
+        bool isOpen() {
+            return mbSession != null;
         }
 
         /// <summary>

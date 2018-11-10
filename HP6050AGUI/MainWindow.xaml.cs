@@ -21,27 +21,18 @@ namespace HP6050AGUI {
     /// </summary>
     public partial class MainWindow : Window {
 
-        Communicator tester;
-
         public MainWindow() {
             InitializeComponent();
         }
-        private void NumberValidationTextBox(object sender, TextCompositionEventArgs e) {
-            Regex regex = new Regex("[^0-9]+");
-            e.Handled = regex.IsMatch(e.Text);
+
+        private void openSession_Click(object sender, RoutedEventArgs e) {
+            var d = new SelectResourceDialog();
+            d.Owner = this;
+            d.ShowDialog();
         }
 
-        async Task runBatteryTest() {
-            tester.stopTest();
-            BatteryTest test = new BatteryTest(10, 1, 30);
-            tester.startTest(test);
-            await Task.Run(() => {
-                BatteryTestOutputParser parser = new BatteryTestOutputParser(tester);
-                while (tester.isRunningTest()) {
-                    parser.process();
-                    //TODO: Log the voltage and current for this point in time
-                }
-            });
+        private void closeSession_Click(object sender, RoutedEventArgs e) {
+
         }
     }
 }
