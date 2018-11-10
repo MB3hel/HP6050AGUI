@@ -1,7 +1,9 @@
-﻿using NationalInstruments.Visa;
+﻿using Microsoft.Win32;
+using NationalInstruments.Visa;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -95,10 +97,18 @@ namespace HP6050AGUI {
         }
 
         private void saveButton_Click(object sender, RoutedEventArgs e) {
-            if(testResults.Count > 0) {
-                // TODO: Save
+           if(testResults.Count > 0) {
+                SaveFileDialog saveDialog = new SaveFileDialog();
+                saveDialog.FileName = "Log-" + DateTime.Now.ToString("MM_dd_yyyy_HH_mm_ss_tt");
+                saveDialog.DefaultExt = ".csv";
+                saveDialog.Filter = "CSV Files (.csv)|*.csv";
+                bool? res = saveDialog.ShowDialog();
+                if(res == true) {
+                    string filename = saveDialog.FileName;
+                    saveLogToCSV(filename);
+                }
             } else {
-                // TODO: Show message box
+                MessageBox.Show("There is no test data to save.", "No Data", MessageBoxButton.OK, MessageBoxImage.Exclamation);
             }
         }
 
@@ -118,6 +128,7 @@ namespace HP6050AGUI {
         /// <param name="dischargeRate">Constant current dicharge rate in amps</param>
         public async Task startBatteryTest(double eodVoltage, int cellCount, double dischargeRate, long maxTimeMs = -1) {
             await Task.Run(() => {
+                // Newlines may be needed after each command???
                 mbSession.RawIO.Write("INPUT OFF");
                 mbSession.RawIO.Write("MODE:CURRENT");
                 mbSession.RawIO.Write("CURRENT:LEVEL" + dischargeRate);
@@ -157,6 +168,22 @@ namespace HP6050AGUI {
                 Console.WriteLine("Test done.");
                 stopWatch.Stop();
             });
+        }
+
+        public void saveLogToCSV(string filepath) {
+            StreamWriter file = new StreamWriter(@filepath, append:false);
+
+            // Add the header
+            file.WriteLine("Time (ms),Voltage (V),Current (A)");
+
+            // Add each data point
+            foreach(DataPoint p in testResults) {
+                file.WriteLine(p.timeMs + "," + p.measuredVoltage + "," + p.measuredCurrent);
+            }
+
+            // Finish writing and close
+            file.Flush();
+            file.Close();
         }
 
     }
