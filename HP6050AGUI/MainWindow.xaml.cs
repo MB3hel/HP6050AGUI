@@ -138,8 +138,10 @@ namespace HP6050AGUI {
                         mbSession.RawIO.Write("MEASURE:CURRENT?");
                         measuredCurrent = Double.Parse(mbSession.RawIO.ReadString());
 
-                        // Add the data
+                        // Add the data to the list and to the UI
                         testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltage, measuredCurrent));
+                        voltageReading.Text = "" + measuredVoltage;
+                        currentReading.Text = "" + measuredCurrent;
                     }catch (Exception e) {
                         Console.WriteLine(e.Message);
                     }

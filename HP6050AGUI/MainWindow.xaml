@@ -36,6 +36,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
                 <StackPanel Orientation="Vertical">
                     <Button x:Name="quickTestBtn"
@@ -43,8 +44,34 @@
                             Content="Start Quick Test"
                             Click="quickTestBtn_Click"/>
                 </StackPanel>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Label FontWeight="Bold"
+                           Content="Voltage: "
+                           Padding="0"
+                           Margin="2"/>
+                    <TextBox Grid.Column="1"
+                             x:Name="voltageReading"
+                             IsEnabled="False"
+                             Margin="2"/>
+
+                    <Label FontWeight="Bold"
+                           Grid.Column="2"
+                           Content="Current: "
+                           Padding="0"
+                           Margin="2"/>
+                    <TextBox Grid.Column="3"
+                             x:Name="currentReading"
+                             IsEnabled="False"
+                             Margin="2"/>
+                </Grid>
                 <StackPanel Orientation="Vertical"
-                            Grid.Row="1">
+                            Grid.Row="2">
                     <ProgressBar x:Name="testProgress"
                                  Height="15"
                                  Margin="2"
