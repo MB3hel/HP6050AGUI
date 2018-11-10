@@ -1,5 +1,4 @@
-﻿using HP6050AInterface;
-using NationalInstruments.Visa;
+﻿using NationalInstruments.Visa;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -63,9 +62,9 @@ namespace HP6050AGUI {
                         Console.WriteLine("Opening " + d.ResourceName);
                         mbSession = (MessageBasedSession)rmSession.Open(d.ResourceName);
                     } catch (InvalidCastException) {
-                        MessageBox.Show("Resource selected must be a message-based session");
+                        MessageBox.Show("Resource selected must be a message-based session", "Invalid Resourece", MessageBoxButton.OK, MessageBoxImage.Error);
                     }catch(Exception err) {
-                        MessageBox.Show(err.Message);
+                        MessageBox.Show(err.Message, "Error Opening Session", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -75,6 +74,25 @@ namespace HP6050AGUI {
             setControlState(false);
             mbSession.Dispose();
         }
+
+        private async void quickTestBtn_Click(object sender, RoutedEventArgs e) {
+            bool doTest = false;
+            if(testResults.Count > 0) {
+                var res = MessageBox.Show("Starting a new test will discard all unsaved data from the previous test. Are you sure you want to start a new test?", 
+                    "Confirm Test", 
+                    MessageBoxButton.YesNo, 
+                    MessageBoxImage.Question);
+                doTest = (res == MessageBoxResult.Yes);
+            } else {
+                doTest = true;
+            }
+
+            await startBatteryTest(10, 1, 50, 10000);
+        }
+
+   
+
+
 
 
         /// <summary>
@@ -121,8 +139,5 @@ namespace HP6050AGUI {
             });
         }
 
-        private void quickTestBtn_Click(object sender, RoutedEventArgs e) {
-            
-        }
     }
 }

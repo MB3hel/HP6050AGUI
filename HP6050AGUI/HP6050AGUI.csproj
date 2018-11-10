@@ -104,11 +104,5 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\HP6050AInterface\HP6050AInterface.csproj">
-      <Project>{776d5380-8695-46a9-98f3-e036942e3406}</Project>
-      <Name>HP6050AInterface</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
