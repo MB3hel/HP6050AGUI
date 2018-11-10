@@ -25,37 +25,24 @@
             <Button Grid.Column="1"
                     x:Name="closeSession"
                     Content="Close Session"
-                    IsEnabled="False"
                     Click="closeSession_Click"
                     Margin="2"/>
         </Grid>
         
         <!--Top Right Configuration panel-->
         <GroupBox Grid.Row="1"
-                  Header="Tests">
+                  Header="Tests"
+                  x:Name="testSection">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
-                <StackPanel Orientation="Vertical"
-                            IsEnabled="False">
+                <StackPanel Orientation="Vertical">
                     <Button x:Name="quickTestBtn"
                             Margin="0,5,0,0"
-                            Content="Start Quick Test"/>
-                    <Button x:Name="slowDischargeBtn"
-                            Margin="0,5,0,0"
-                            Content="Start Slow Discharge Test"/>
-                    <Button x:Name="stressTestBtn"
-                            Margin="0,5,0,0"
-                            Content="Start Stress Test"/>
+                            Content="Start Quick Test"
+                            Click="quickTestBtn_Click"/>
                 </StackPanel>
-                <Button Grid.Row="2"
-                        IsEnabled="False"
-                        x:Name="cancelTestBtn"
-                        Content="STOP TEST"
-                        Foreground="Red"
-                        FontWeight="Bold"/>
             </Grid>
         </GroupBox>
         <!--Bottom logging panel-->

@@ -8,7 +8,8 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner" 
-        Title="Select Resource" Height="300" Width="350">
+        Title="Select Resource" Height="300" Width="350"
+        Loaded="Window_Loaded">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
@@ -23,6 +24,7 @@
                FontWeight="Bold"/>
         <ListBox x:Name="availableResourceList"
                  Grid.Row="1"
+                 MouseDoubleClick="availableResourceList_MouseDoubleClick"
                  Margin="2"/>
         <Label Content="Resoruce String"
                Grid.Row="2"
@@ -30,6 +32,7 @@
                Padding="0"
                FontWeight="Bold"/>
         <TextBox x:Name="resourceString"
+                 Text="GPIB0::0::INSTR"
                  Grid.Row="3"
                  Margin="2"/>
         <StackPanel Grid.Row="4"
@@ -38,10 +41,13 @@
             <Button x:Name="okButton"
                     Margin="2"
                     Content="OK"
+                    Click="okButton_Click"
+                    IsDefault="True"
                     Width="100"/>
             <Button x:Name="cancelButton"
                     Margin="2"
                     Content="Cancel"
+                    IsCancel="True"
                     Width="100"/>
         </StackPanel>
     </Grid>
