@@ -29,13 +29,13 @@
                     Margin="2"/>
         </Grid>
         
-        <!--Top Right Configuration panel-->
         <GroupBox Grid.Row="1"
                   Header="Tests"
                   x:Name="testSection">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
                 <StackPanel Orientation="Vertical">
                     <Button x:Name="quickTestBtn"
@@ -43,34 +43,30 @@
                             Content="Start Quick Test"
                             Click="quickTestBtn_Click"/>
                 </StackPanel>
+                <StackPanel Orientation="Vertical"
+                            Grid.Row="1">
+                    <ProgressBar x:Name="testProgress"
+                                 Height="15"
+                                 Margin="2"
+                                 IsIndeterminate="False"
+                                 Value="0"/>
+                    <Button x:Name="stopTestButton"
+                            Margin="2"
+                            Content="STOP TEST"
+                            Click="stopTestButton_Click"
+                            FontWeight="Bold"
+                            Foreground="Red"/>
+                </StackPanel>
             </Grid>
         </GroupBox>
         <!--Bottom logging panel-->
         <GroupBox Grid.Row="2"
                   Header="Logging">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBox Grid.Row="1"
-                         Grid.ColumnSpan="3"
-                         x:Name="pathBox"
-                         IsEnabled="False" Margin="0,2,2,0"/>
-                <Button Grid.Row="1"
-                        Grid.Column="3"
-                        x:Name="browseLogButton"
-                        Content="Browse..." Margin="2,2,2,0"/>
-                <Button Grid.Row="1"
-                        Grid.Column="4"
-                        x:Name="saveLogButton"
-                        Content="Save" Margin="2,2,0,0"/>
+                <Button x:Name="saveButton"
+                        Content="Save test log"
+                        Click="saveButton_Click"
+                        Margin="2"/>
             </Grid>
         </GroupBox>
     </Grid>

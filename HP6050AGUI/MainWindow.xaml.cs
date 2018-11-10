@@ -35,6 +35,7 @@ namespace HP6050AGUI {
 
         List<DataPoint> testResults = new List<DataPoint>();
 
+        bool userCanceledTest = false;
         string lastResourceString;
         MessageBasedSession mbSession;
 
@@ -75,6 +76,7 @@ namespace HP6050AGUI {
             mbSession.Dispose();
         }
 
+        // This is how to start a test
         private async void quickTestBtn_Click(object sender, RoutedEventArgs e) {
             bool doTest = false;
             if(testResults.Count > 0) {
@@ -87,10 +89,23 @@ namespace HP6050AGUI {
                 doTest = true;
             }
 
+            userCanceledTest = false;
             await startBatteryTest(10, 1, 50, 10000);
+            MessageBox.Show("The test has finished.", "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-   
+        private void saveButton_Click(object sender, RoutedEventArgs e) {
+            if(testResults.Count > 0) {
+                // TODO: Save
+            } else {
+                // TODO: Show message box
+            }
+        }
+
+        private void stopTestButton_Click(object sender, RoutedEventArgs e) {
+            userCanceledTest = true; // This will cause a stop after the current capture operation
+        }
+
 
 
 
@@ -114,6 +129,7 @@ namespace HP6050AGUI {
                 double measuredCurrent = 0;
                 bool shouldEnd = false;
                 do {
+                    testProgress.IsIndeterminate = true;
                     try {
                         // Read voltage
                         mbSession.RawIO.Write("MEASURE:VOLTAGE?");
@@ -133,7 +149,9 @@ namespace HP6050AGUI {
                     if (maxTimeMs > -1)
                         timedOut = stopWatch.ElapsedMilliseconds >= maxTimeMs;
                     shouldEnd = (measuredVoltage < cellCount * eodVoltage) || shouldEnd;
-                } while (!shouldEnd);
+                } while (!shouldEnd || !userCanceledTest);
+                testProgress.IsIndeterminate = false;
+                testProgress.Value = 0;
                 Console.WriteLine("Test done.");
                 stopWatch.Stop();
             });
