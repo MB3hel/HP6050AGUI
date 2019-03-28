@@ -105,7 +105,7 @@ namespace HP6050AGUI {
             }
 
             userCanceledTest = false;
-            await startBatteryTest(10, 1, 50, 10000);
+            await startBatteryTest(10, 1, 0.5, 10000);
             Console.WriteLine("Test completed.");
             Console.WriteLine(endReason);
             MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
