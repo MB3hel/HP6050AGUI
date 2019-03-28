@@ -19,6 +19,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 namespace HP6050AGUI {
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -37,6 +38,7 @@ namespace HP6050AGUI {
 
         List<DataPoint> testResults = new List<DataPoint>();
 
+        string endReason = "";
         bool userCanceledTest = false;
         string lastResourceString;
         MessageBasedSession mbSession;
@@ -44,6 +46,9 @@ namespace HP6050AGUI {
         public MainWindow() {
             InitializeComponent();
             setControlState(false);
+            ControlWriter writer = new ControlWriter(this, output);
+            Console.SetOut(writer);
+            Console.SetError(writer);
         }
 
         public void setControlState(bool isOpen) {
@@ -64,10 +69,16 @@ namespace HP6050AGUI {
                     try {
                         Console.WriteLine("Opening " + d.ResourceName);
                         mbSession = (MessageBasedSession)rmSession.Open(d.ResourceName);
+                        setControlState(true);
                     } catch (InvalidCastException) {
-                        MessageBox.Show("Resource selected must be a message-based session", "Invalid Resourece", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }catch(Exception err) {
-                        MessageBox.Show(err.Message, "Error Opening Session", MessageBoxButton.OK, MessageBoxImage.Error);
+                        string message = "Resource selected must be a message-based session";
+                        string title = "Invalid Resource";
+                        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+                        Console.WriteLine(Title + ": " + message);
+                    } catch(Exception err) {
+                        string title = "Error Opening Session";
+                        MessageBox.Show(err.Message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+                        Console.WriteLine(title + ": " + err.Message);
                     }
                 }
             }
@@ -76,6 +87,8 @@ namespace HP6050AGUI {
         private void closeSession_Click(object sender, RoutedEventArgs e) {
             setControlState(false);
             mbSession.Dispose();
+            if(mbSession != null && !mbSession.IsDisposed)
+                Console.WriteLine("Closing session...");
         }
 
         // This is how to start a test
@@ -93,7 +106,9 @@ namespace HP6050AGUI {
 
             userCanceledTest = false;
             await startBatteryTest(10, 1, 50, 10000);
-            MessageBox.Show("The test has finished.", "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            Console.WriteLine("Test completed.");
+            Console.WriteLine(endReason);
+            MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void saveButton_Click(object sender, RoutedEventArgs e) {
@@ -140,7 +155,9 @@ namespace HP6050AGUI {
                 double measuredCurrent = 0;
                 bool shouldEnd = false;
                 do {
-                    testProgress.IsIndeterminate = true;
+                    this.Dispatcher.Invoke(() => {
+                        testProgress.IsIndeterminate = true;
+                    });
                     try {
                         // Read voltage
                         mbSession.RawIO.Write("MEASURE:VOLTAGE?");
@@ -151,21 +168,29 @@ namespace HP6050AGUI {
 
                         // Add the data to the list and to the UI
                         testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltage, measuredCurrent));
-                        voltageReading.Text = "" + measuredVoltage;
-                        currentReading.Text = "" + measuredCurrent;
+                        this.Dispatcher.Invoke(() => {
+                            voltageReading.Text = "" + measuredVoltage;
+                            currentReading.Text = "" + measuredCurrent;
+                        });
                     }catch (Exception e) {
-                        Console.WriteLine(e.Message);
+                        Console.WriteLine("Error running test: " + e.Message);
                     }
 
                     // Stop conditions
                     bool timedOut = false;
                     if (maxTimeMs > -1)
                         timedOut = stopWatch.ElapsedMilliseconds >= maxTimeMs;
-                    shouldEnd = (measuredVoltage < cellCount * eodVoltage) || shouldEnd;
-                } while (!shouldEnd || !userCanceledTest);
-                testProgress.IsIndeterminate = false;
-                testProgress.Value = 0;
-                Console.WriteLine("Test done.");
+                    shouldEnd = (measuredVoltage < cellCount * eodVoltage);
+                } while (!shouldEnd && !userCanceledTest);
+                if (userCanceledTest) {
+                    endReason = "Canceled by user.";
+                } else {
+                    endReason = "Reached end of discharge voltage.";
+                }
+                this.Dispatcher.Invoke(() => {
+                    testProgress.IsIndeterminate = false;
+                    testProgress.Value = 0;
+                });
                 stopWatch.Stop();
             });
         }

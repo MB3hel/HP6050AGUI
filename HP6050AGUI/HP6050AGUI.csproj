@@ -58,6 +58,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ControlWriter.cs" />
     <Compile Include="SelectResourceDialog.xaml.cs">
       <DependentUpon>SelectResourceDialog.xaml</DependentUpon>
     </Compile>

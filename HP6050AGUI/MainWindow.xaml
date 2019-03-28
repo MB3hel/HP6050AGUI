@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:HP6050AGUI"
         mc:Ignorable="d"
-        Title="BatteryTester" Height="350" Width="500">
+        Title="BatteryTester" Height="425" Width="600">
     <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
@@ -35,6 +35,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
@@ -44,7 +45,12 @@
                             Content="Start Quick Test"
                             Click="quickTestBtn_Click"/>
                 </StackPanel>
-                <Grid Grid.Row="1">
+                <GroupBox Grid.Row="1"
+                          Header="Messages">
+                    <TextBox IsEnabled="False"
+                             x:Name="output"/>
+                </GroupBox>
+                <Grid Grid.Row="2">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="auto"/>
                         <ColumnDefinition Width="*"/>
@@ -71,7 +77,7 @@
                              Margin="2"/>
                 </Grid>
                 <StackPanel Orientation="Vertical"
-                            Grid.Row="2">
+                            Grid.Row="3">
                     <ProgressBar x:Name="testProgress"
                                  Height="15"
                                  Margin="2"
