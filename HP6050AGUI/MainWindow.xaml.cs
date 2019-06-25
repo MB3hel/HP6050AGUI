@@ -111,6 +111,27 @@ namespace HP6050AGUI {
             MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
+        private async void button10a_clicked(object sender, RoutedEventArgs e) {
+            bool doTest = false;
+            if (testResults.Count > 0) {
+                var res = MessageBox.Show("Starting a new test will discard all unsaved data from the previous test. Are you sure you want to start a new test?",
+                    "Confirm Test",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                doTest = (res == MessageBoxResult.Yes);
+            } else {
+                doTest = true;
+            }
+
+            userCanceledTest = false;
+            await startBatteryTest(11.95, 1, 10, 3600 * 1000);
+            Console.WriteLine("Test completed.");
+            Console.WriteLine(endReason);
+            MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        
+
         private void saveButton_Click(object sender, RoutedEventArgs e) {
            if(testResults.Count > 0) {
                 SaveFileDialog saveDialog = new SaveFileDialog();
@@ -146,7 +167,7 @@ namespace HP6050AGUI {
                 // Newlines may be needed after each command???
                 mbSession.RawIO.Write("INPUT OFF");
                 mbSession.RawIO.Write("MODE:CURRENT");
-                mbSession.RawIO.Write("CURRENT:LEVEL" + dischargeRate);
+                mbSession.RawIO.Write("CURR " + (dischargeRate * 1000) + "MA");
                 mbSession.RawIO.Write("INPUT ON");
                 // Start timing
                 Stopwatch stopWatch = new Stopwatch();
@@ -154,6 +175,7 @@ namespace HP6050AGUI {
                 double measuredVoltage = 0;
                 double measuredCurrent = 0;
                 bool shouldEnd = false;
+                bool timedOut = false;
                 do {
                     this.Dispatcher.Invoke(() => {
                         testProgress.IsIndeterminate = true;
@@ -168,25 +190,29 @@ namespace HP6050AGUI {
 
                         // Add the data to the list and to the UI
                         testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltage, measuredCurrent));
+                        long elapsed = stopWatch.ElapsedMilliseconds;
                         this.Dispatcher.Invoke(() => {
                             voltageReading.Text = "" + measuredVoltage;
                             currentReading.Text = "" + measuredCurrent;
+                            remainingTime.Text = "" + ((maxTimeMs - elapsed) / 1000.0);
                         });
-                    }catch (Exception e) {
+                    } catch (Exception e) {
                         Console.WriteLine("Error running test: " + e.Message);
                     }
 
                     // Stop conditions
-                    bool timedOut = false;
                     if (maxTimeMs > -1)
                         timedOut = stopWatch.ElapsedMilliseconds >= maxTimeMs;
                     shouldEnd = (measuredVoltage < cellCount * eodVoltage);
-                } while (!shouldEnd && !userCanceledTest);
+                } while (!shouldEnd && !userCanceledTest && !timedOut);
                 if (userCanceledTest) {
                     endReason = "Canceled by user.";
-                } else {
+                } else if (timedOut) {
+                    endReason = "Reached time limit.";
+                }else {
                     endReason = "Reached end of discharge voltage.";
                 }
+                mbSession.RawIO.Write("INPUT OFF");
                 this.Dispatcher.Invoke(() => {
                     testProgress.IsIndeterminate = false;
                     testProgress.Value = 0;
