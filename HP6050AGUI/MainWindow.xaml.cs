@@ -26,14 +26,14 @@ namespace HP6050AGUI {
     public partial class MainWindow : Window {
 
         struct DataPoint {
-            public DataPoint(long timeMs, double measuredVoltage, double measuredCurrent) {
+            public DataPoint(long timeMs, double[] measuredVoltages, double[] measuredCurrents) {
                 this.timeMs = timeMs;
-                this.measuredVoltage = measuredVoltage;
-                this.measuredCurrent = measuredCurrent;
+                this.measuredVoltages = measuredVoltages;
+                this.measuredCurrents = measuredCurrents;
             }
             public long timeMs { get; private set; }
-            public double measuredVoltage { get; private set; }
-            public double measuredCurrent { get; private set; }
+            public double[] measuredVoltages { get; private set; }
+            public double[] measuredCurrents { get; private set; }
         }
 
         List<DataPoint> testResults = new List<DataPoint>();
@@ -41,6 +41,7 @@ namespace HP6050AGUI {
         string endReason = "";
         bool userCanceledTest = false;
         string lastResourceString;
+        string currentTestName = "";
         MessageBasedSession mbSession;
 
         public MainWindow() {
@@ -105,7 +106,12 @@ namespace HP6050AGUI {
             }
 
             userCanceledTest = false;
+
+            // EDIT THESE LINES
+            currentTestName = "Quick Test";
             await startBatteryTest(10, 1, 0.5, 10000);
+
+
             Console.WriteLine("Test completed.");
             Console.WriteLine(endReason);
             MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -124,13 +130,41 @@ namespace HP6050AGUI {
             }
 
             userCanceledTest = false;
+
+            // EDIT THESE LINES
+            currentTestName = "10A Test";
             await startBatteryTest(11.95, 1, 10, 3600 * 1000);
+
+
             Console.WriteLine("Test completed.");
             Console.WriteLine(endReason);
             MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        
+        private async void button18a_clicked(object sender, RoutedEventArgs e) {
+            bool doTest = false;
+            if (testResults.Count > 0) {
+                var res = MessageBox.Show("Starting a new test will discard all unsaved data from the previous test. Are you sure you want to start a new test?",
+                    "Confirm Test",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                doTest = (res == MessageBoxResult.Yes);
+            } else {
+                doTest = true;
+            }
+
+            userCanceledTest = false;
+
+            // EDIT THESE LINES
+            currentTestName = "18A Test";
+            await startBatteryTest(11.95, 1, 18, 3600 * 1000);
+
+
+            Console.WriteLine("Test completed.");
+            Console.WriteLine(endReason);
+            MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
 
         private void saveButton_Click(object sender, RoutedEventArgs e) {
            if(testResults.Count > 0) {
@@ -165,15 +199,32 @@ namespace HP6050AGUI {
         public async Task startBatteryTest(double eodVoltage, int cellCount, double dischargeRate, long maxTimeMs = -1) {
             await Task.Run(() => {
                 // Newlines may be needed after each command???
+                mbSession.RawIO.Write("CHANNEL 1");
                 mbSession.RawIO.Write("INPUT OFF");
                 mbSession.RawIO.Write("MODE:CURRENT");
                 mbSession.RawIO.Write("CURR " + (dischargeRate * 1000) + "MA");
+                mbSession.RawIO.Write("CHANNEL 2");
+                mbSession.RawIO.Write("INPUT OFF");
+                mbSession.RawIO.Write("MODE:CURRENT");
+                mbSession.RawIO.Write("CURR " + (dischargeRate * 1000) + "MA");
+                mbSession.RawIO.Write("CHANNEL 3");
+                mbSession.RawIO.Write("INPUT OFF");
+                mbSession.RawIO.Write("MODE:CURRENT");
+                mbSession.RawIO.Write("CURR " + (dischargeRate * 1000) + "MA");
+
+                mbSession.RawIO.Write("CHANNEL 1");
                 mbSession.RawIO.Write("INPUT ON");
+                mbSession.RawIO.Write("CHANNEL 2");
+                mbSession.RawIO.Write("INPUT ON");
+                mbSession.RawIO.Write("CHANNEL 3");
+                mbSession.RawIO.Write("INPUT ON");
+
                 // Start timing
                 Stopwatch stopWatch = new Stopwatch();
                 stopWatch.Start();
-                double measuredVoltage = 0;
-                double measuredCurrent = 0;
+                double[] measuredVoltages = { 0, 0, 0 };
+                double[] measuredCurrents = { 0, 0, 0 };
+                bool[] offInputs = new bool[] { false, false, false };
                 bool shouldEnd = false;
                 bool timedOut = false;
                 do {
@@ -181,29 +232,50 @@ namespace HP6050AGUI {
                         testProgress.IsIndeterminate = true;
                     });
                     try {
-                        // Read voltage
-                        mbSession.RawIO.Write("MEASURE:VOLTAGE?");
-                        measuredVoltage = Double.Parse(mbSession.RawIO.ReadString());
-                        // Read actual current
-                        mbSession.RawIO.Write("MEASURE:CURRENT?");
-                        measuredCurrent = Double.Parse(mbSession.RawIO.ReadString());
+
+                        for (int i = 1; i <= 3; ++i) {
+                            // Switch channel
+                            mbSession.RawIO.Write("CHANNEL " + i);
+
+                            // Read voltage
+                            mbSession.RawIO.Write("MEASURE:VOLTAGE?");
+                            measuredVoltages[i - 1] = Double.Parse(mbSession.RawIO.ReadString());
+                            // Read actual current
+                            mbSession.RawIO.Write("MEASURE:CURRENT?");
+                            measuredCurrents[i - 1] = Double.Parse(mbSession.RawIO.ReadString());
+                        }
 
                         // Add the data to the list and to the UI
-                        testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltage, measuredCurrent));
+                        testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltages, measuredCurrents));
                         long elapsed = stopWatch.ElapsedMilliseconds;
                         this.Dispatcher.Invoke(() => {
-                            voltageReading.Text = "" + measuredVoltage;
-                            currentReading.Text = "" + measuredCurrent;
+                            voltageReading1.Text = measuredVoltages[0] + " V";
+                            voltageReading2.Text = measuredVoltages[1] + " V";
+                            voltageReading3.Text = measuredVoltages[2] + " V";
+                            currentReading1.Text = measuredCurrents[0] + " A";
+                            currentReading2.Text = measuredCurrents[1] + " A";
+                            currentReading3.Text = measuredCurrents[2] + " A";
                             remainingTime.Text = "" + ((maxTimeMs - elapsed) / 1000.0);
                         });
                     } catch (Exception e) {
                         Console.WriteLine("Error running test: " + e.Message);
                     }
 
+                    // Turn off inputs for eod channels
+                    for(int i = 1; i <= 3; ++i) {
+                        if(!offInputs[i - 1]) {
+                            if (measuredVoltages[i - 1] < cellCount * eodVoltage) {
+                                mbSession.RawIO.Write("CHANNEL " + i);
+                                mbSession.RawIO.Write("INPUT OFF");
+                                offInputs[i - 1] = true;
+                            }
+                        }
+                    }
+
                     // Stop conditions
                     if (maxTimeMs > -1)
                         timedOut = stopWatch.ElapsedMilliseconds >= maxTimeMs;
-                    shouldEnd = (measuredVoltage < cellCount * eodVoltage);
+                    shouldEnd = offInputs[0] && offInputs[1] && offInputs[2];
                 } while (!shouldEnd && !userCanceledTest && !timedOut);
                 if (userCanceledTest) {
                     endReason = "Canceled by user.";
@@ -212,7 +284,15 @@ namespace HP6050AGUI {
                 }else {
                     endReason = "Reached end of discharge voltage.";
                 }
+
+                // Turn all inputs off
+                mbSession.RawIO.Write("CHANNEL 1");
                 mbSession.RawIO.Write("INPUT OFF");
+                mbSession.RawIO.Write("CHANNEL 2");
+                mbSession.RawIO.Write("INPUT OFF");
+                mbSession.RawIO.Write("CHANNEL 3");
+                mbSession.RawIO.Write("INPUT OFF");
+
                 this.Dispatcher.Invoke(() => {
                     testProgress.IsIndeterminate = false;
                     testProgress.Value = 0;
@@ -224,12 +304,13 @@ namespace HP6050AGUI {
         public void saveLogToCSV(string filepath) {
             StreamWriter file = new StreamWriter(@filepath, append:false);
 
-            // Add the header
-            file.WriteLine("Time (ms),Voltage (V),Current (A)");
+            // Add the headers
+            file.WriteLine(currentTestName + "," + name1.Text + "," + name1.Text + "," + name2.Text + "," + name2.Text + "," + name3.Text + "," + name3.Text);
+            file.WriteLine("Time (ms),Voltage1 (V),Current1 (A),Voltage2 (V),Current2 (A),Voltage3 (V),Current3 (A)");
 
             // Add each data point
             foreach(DataPoint p in testResults) {
-                file.WriteLine(p.timeMs + "," + p.measuredVoltage + "," + p.measuredCurrent);
+                file.WriteLine(p.timeMs + "," + p.measuredVoltages[0] + "," + p.measuredCurrents[0] + "," + p.measuredVoltages[1] + "," + p.measuredCurrents[1] + "," + p.measuredVoltages[2] + "," + p.measuredCurrents[2]);
             }
 
             // Finish writing and close
