@@ -197,6 +197,7 @@ namespace HP6050AGUI {
         /// <param name="cellCount">The number of cells to be discharged in series</param>
         /// <param name="dischargeRate">Constant current dicharge rate in amps</param>
         public async Task startBatteryTest(double eodVoltage, int cellCount, double dischargeRate, long maxTimeMs = -1) {
+            testResults.Clear();
             await Task.Run(() => {
                 // Newlines may be needed after each command???
                 mbSession.RawIO.Write("CHANNEL 1");
