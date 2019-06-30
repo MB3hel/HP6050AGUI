@@ -248,7 +248,7 @@ namespace HP6050AGUI {
                     bool shouldEnd = false;
                     bool timedOut = false;
                     do {
-                        Dispatcher.Invoke(() => {
+                        Dispatcher.InvokeAsync(() => {
                             testProgress.IsIndeterminate = true;
                         });
                         try {
@@ -261,6 +261,9 @@ namespace HP6050AGUI {
                             // Add the data to the list and to the UI
                             testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltages, measuredCurrents));
                             long elapsed = stopWatch.ElapsedMilliseconds;
+
+
+                            //TODO: May not need to do all of this from dispatcher. Would speed up samples
                             Dispatcher.Invoke(() => {
                                 for (int i = 1; i <= channelCount; ++i) {
                                     batteryEntries[i - 1].voltage = measuredVoltages[i - 1];
@@ -285,7 +288,13 @@ namespace HP6050AGUI {
                         // Stop conditions
                         if (maxTimeMs > -1)
                             timedOut = stopWatch.ElapsedMilliseconds >= maxTimeMs;
-                        shouldEnd = offInputs[0] && offInputs[1] && offInputs[2];
+
+                        shouldEnd = true;
+                        for(int i = 0; i < channelCount; ++i) {
+                            shouldEnd = shouldEnd && offInputs[i];
+                            if (!shouldEnd) break;
+                        }
+
                     } while (!shouldEnd && !userCanceledTest && !timedOut);
 
                     if (userCanceledTest) {
