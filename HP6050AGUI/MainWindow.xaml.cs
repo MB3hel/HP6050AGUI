@@ -51,12 +51,19 @@ namespace HP6050AGUI {
             public string batteryName { get; set; }
         }
 
+        public class TestSettings {
+            public string testName { get; set; }
+            public double eodVoltage { get; set; }
+            public double dischargeRateAmps { get; set; }
+            public long maxTimeSec { get; set; }
+        }
+
+        Dictionary<object, TestSettings> registeredTests = new Dictionary<object, TestSettings>();
         List<DataPoint> testResults = new List<DataPoint>();
         List<BatteryEntry> batteryEntries = new List<BatteryEntry>();
 
         
         int channelCount;
-        int testChannelCount = 0;
         string endReason = "";
         bool userCanceledTest = false;
         string lastResourceString;
@@ -71,12 +78,33 @@ namespace HP6050AGUI {
             ControlWriter writer = new ControlWriter(this, output);
             Console.SetOut(writer);
             Console.SetError(writer);
+
+            // Setup tests here
+            createTest(new TestSettings() {
+                testName = "Quick Test",
+                eodVoltage = 11.95,
+                dischargeRateAmps = 0.5,
+                maxTimeSec = 10
+            });
+            createTest(new TestSettings() {
+                testName = "10A Test",
+                eodVoltage = 11.95,
+                dischargeRateAmps = 10,
+                maxTimeSec = 5400   // 1.5 hrs
+            });
+            createTest(new TestSettings() {
+                testName = "18A Test",
+                eodVoltage = 11.95,
+                dischargeRateAmps = 18,
+                maxTimeSec = 3600
+            });
         }
 
         public void setControlState(bool isOpen) {
             openSession.IsEnabled = !isOpen;
             closeSession.IsEnabled = isOpen;
             testSection.IsEnabled = isOpen;
+            statusSection.IsEnabled = isOpen;
         }
 
         private void openSession_Click(object sender, RoutedEventArgs e) {
@@ -114,32 +142,25 @@ namespace HP6050AGUI {
                 Console.WriteLine("Closing session...");
         }
 
-        // This is how to start a test
-        private async void quickTestBtn_Click(object sender, RoutedEventArgs e) {
-            bool doTest = false;
-            if(testResults.Count > 0) {
-                var res = MessageBox.Show("Starting a new test will discard all unsaved data from the previous test. Are you sure you want to start a new test?", 
-                    "Confirm Test", 
-                    MessageBoxButton.YesNo, 
-                    MessageBoxImage.Question);
-                doTest = (res == MessageBoxResult.Yes);
-            } else {
-                doTest = true;
-            }
+        private void createTest(TestSettings settings) {
+            Button button = new Button();
+            button.Content = settings.testName;
+            button.Click += testButtonHandler;
+            button.Margin = new Thickness(0, 2, 5, 2);
 
-            userCanceledTest = false;
-
-            // EDIT THESE LINES
-            currentTestName = "Quick Test";
-            await startBatteryTest(10, 0.5, 10000);
-
-
-            Console.WriteLine("Test completed.");
-            Console.WriteLine(endReason);
-            MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            testsPanel.Children.Add(button);
+            registeredTests.Add(button, settings);
         }
 
-        private async void button10a_clicked(object sender, RoutedEventArgs e) {
+        private async void testButtonHandler(object sender, RoutedEventArgs e) {
+
+            if (!registeredTests.ContainsKey(sender)) {
+                Console.WriteLine("ATTEMPTED TO START UNKNOWN TEST!!! THIS SHOULD NOT BE POSSIBLE.");
+                return;
+            }
+            
+            TestSettings settings = registeredTests[sender];
+
             bool doTest = false;
             if (testResults.Count > 0) {
                 var res = MessageBox.Show("Starting a new test will discard all unsaved data from the previous test. Are you sure you want to start a new test?",
@@ -152,41 +173,13 @@ namespace HP6050AGUI {
             }
 
             userCanceledTest = false;
-
-            // EDIT THESE LINES
-            currentTestName = "10A Test";
-            await startBatteryTest(11.95, 10, 3600 * 1000);
-
+            currentTestName = settings.testName;
+            await startBatteryTest(settings.eodVoltage, settings.dischargeRateAmps, settings.maxTimeSec * 1000);
 
             Console.WriteLine("Test completed.");
             Console.WriteLine(endReason);
             MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
-        private async void button18a_clicked(object sender, RoutedEventArgs e) {
-            bool doTest = false;
-            if (testResults.Count > 0) {
-                var res = MessageBox.Show("Starting a new test will discard all unsaved data from the previous test. Are you sure you want to start a new test?",
-                    "Confirm Test",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-                doTest = (res == MessageBoxResult.Yes);
-            } else {
-                doTest = true;
-            }
-
-            userCanceledTest = false;
-
-            // EDIT THESE LINES
-            currentTestName = "18A Test";
-            await startBatteryTest(11.95, 18, 3600 * 1000);
-
-
-            Console.WriteLine("Test completed.");
-            Console.WriteLine(endReason);
-            MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
 
         private void saveButton_Click(object sender, RoutedEventArgs e) {
            if(testResults.Count > 0) {

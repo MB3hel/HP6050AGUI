@@ -45,26 +45,19 @@
         <GroupBox Grid.Row="2"
                   Header="Tests"
                   x:Name="testSection">
-            <StackPanel Orientation="Vertical">
-                <Button x:Name="quickTestBtn"
-                        Margin="0,5,0,0"
-                        Content="Start Quick Test"
-                        Click="quickTestBtn_Click"/>
-                <Button x:Name="current10Button"
-                        Margin="0,5,0,0"
-                        Content="Start 10A Test"
-                        Click="button10a_clicked"/>
-                <Button x:Name="current18Button"
-                        Margin="0,5,0,0"
-                        Content="Start 18A Test"
-                        Click="button18a_clicked"/>
-            </StackPanel>
+            <ScrollViewer>
+                <StackPanel x:Name="testsPanel"
+                    Orientation="Vertical">
+
+                </StackPanel>
+            </ScrollViewer>
         </GroupBox>
 
 
         <!--Test status box-->
         <GroupBox Grid.Row="3"
-                  Header="Test Status">
+                  Header="Test Status"
+                  x:Name="statusSection">
             <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="auto"/>
