@@ -5,11 +5,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:HP6050AGUI"
         mc:Ignorable="d"
-        Title="BatteryTester" Height="500" Width="800">
+        Title="BatteryTester" Height="600" Width="850">
+
     <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="auto"/>
             <RowDefinition Height="auto"/>
         </Grid.RowDefinitions>
 
@@ -28,182 +32,118 @@
                     Click="closeSession_Click"
                     Margin="2"/>
         </Grid>
-        
+
+
+        <!--Message output box-->
         <GroupBox Grid.Row="1"
+                          Header="Messages">
+            <TextBox IsEnabled="False"
+                             x:Name="output"/>
+        </GroupBox>
+
+        <!--Tests Panel-->
+        <GroupBox Grid.Row="2"
                   Header="Tests"
                   x:Name="testSection">
-            <Grid>
+            <StackPanel Orientation="Vertical">
+                <Button x:Name="quickTestBtn"
+                        Margin="0,5,0,0"
+                        Content="Start Quick Test"
+                        Click="quickTestBtn_Click"/>
+                <Button x:Name="current10Button"
+                        Margin="0,5,0,0"
+                        Content="Start 10A Test"
+                        Click="button10a_clicked"/>
+                <Button x:Name="current18Button"
+                        Margin="0,5,0,0"
+                        Content="Start 18A Test"
+                        Click="button18a_clicked"/>
+            </StackPanel>
+        </GroupBox>
+
+
+        <!--Test status box-->
+        <GroupBox Grid.Row="3"
+                  Header="Test Status">
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="auto"/>
-                    <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
                     <RowDefinition Height="auto"/>
                 </Grid.RowDefinitions>
-                <StackPanel Orientation="Vertical">
-                    <Button x:Name="quickTestBtn"
-                            Margin="0,5,0,0"
-                            Content="Start Quick Test"
-                            Click="quickTestBtn_Click"/>
-                    <Button x:Name="current10Button"
-                            Margin="0,5,0,0"
-                            Content="Start 10A Test"
-                            Click="button10a_clicked"/>
-                    <Button x:Name="current18Button"
-                            Margin="0,5,0,0"
-                            Content="Start 18A Test"
-                            Click="button18a_clicked"/>
-                </StackPanel>
-                <GroupBox Grid.Row="1"
-                          Header="Messages">
-                    <TextBox IsEnabled="False"
-                             x:Name="output"/>
-                </GroupBox>
-                <Grid Grid.Row="2">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Label FontWeight="Bold"
-                           Content="Voltage (1): "
-                           Padding="0"
-                           Margin="2"/>
-                    <TextBox Grid.Column="1"
-                             x:Name="voltageReading1"
-                             IsEnabled="False"
-                             Margin="2"/>
 
-                    <Label FontWeight="Bold"
-                           Grid.Column="2"
-                           Content="Current (1): "
-                           Padding="0"
-                           Margin="2"/>
-                    <TextBox Grid.Column="3"
-                             x:Name="currentReading1"
-                             IsEnabled="False"
-                             Margin="2"/>
-                    <Label FontWeight="Bold"
-                           Grid.Column="4"
-                           Content="Battery Name (1): "
-                           Padding="0"
-                           Margin="2"/>
-                    <TextBox Grid.Column="5"
-                             x:Name="name1"
-                             Margin="2"/>
-                </Grid>
-                <Grid Grid.Row="3">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Label FontWeight="Bold"
-                           Content="Voltage (2): "
-                           Padding="0"
-                           Margin="2"/>
-                    <TextBox Grid.Column="1"
-                             x:Name="voltageReading2"
-                             IsEnabled="False"
-                             Margin="2"/>
+                <DataGrid x:Name="batteryDataGrid"
+                          Grid.Row="0"
+                          Grid.Column="0"
+                          Grid.ColumnSpan="2"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserReorderColumns="False"
+                          CanUserResizeColumns="False"
+                          CanUserSortColumns="False"
+                          AutoGenerateColumns="False"
+                          Margin="5"
+                          ItemsSource="{Binding Path=batteryEntries}">
 
-                    <Label FontWeight="Bold"
-                           Grid.Column="2"
-                           Content="Current (2): "
-                           Padding="0"
-                           Margin="2"/>
-                    <TextBox Grid.Column="3"
-                             x:Name="currentReading2"
-                             IsEnabled="False"
-                             Margin="2"/>
-                    <Label FontWeight="Bold"
-                           Grid.Column="4"
-                           Content="Battery Name (2): "
-                           Padding="0"
-                           Margin="2"/>
-                    <TextBox Grid.Column="5"
-                             x:Name="name2"
-                             Margin="2"/>
-                </Grid>
-                <Grid Grid.Row="4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Label FontWeight="Bold"
-                           Content="Voltage (3): "
-                           Padding="0"
-                           Margin="2"/>
-                    <TextBox Grid.Column="1"
-                             x:Name="voltageReading3"
-                             IsEnabled="False"
-                             Margin="2"/>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Channel"
+                                            Binding="{Binding channel}"
+                                            Width="auto"
+                                            IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Voltage (V)"
+                                            Binding="{Binding voltage}"
+                                            Width="*"
+                                            IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Current (A)"
+                                            Binding="{Binding current}"
+                                            Width="*"
+                                            IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Battery Name"
+                                            Binding="{Binding batteryName}"
+                                            Width="*"/>
+                    </DataGrid.Columns>
 
-                    <Label FontWeight="Bold"
-                           Grid.Column="2"
-                           Content="Current (3): "
-                           Padding="0"
-                           Margin="2"/>
-                    <TextBox Grid.Column="3"
-                             x:Name="currentReading3"
-                             IsEnabled="False"
-                             Margin="2"/>
-
-                    <Label FontWeight="Bold"
-                           Grid.Column="4"
-                           Content="Battery Name (3): "
-                           Padding="0"
-                           Margin="2"/>
-                    <TextBox Grid.Column="5"
-                             x:Name="name3"
-                             Margin="2"/>
-                </Grid>
-                <Grid Grid.Row="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Label FontWeight="Bold"
+                </DataGrid>
+                
+                <Label FontWeight="Bold"
                            Grid.Column="0"
+                           Grid.Row="1"
                            Content="Time Raminng (sec): "
                            Padding="0"
                            Margin="2"/>
-                    <TextBox Grid.Column="1"
+                <TextBox Grid.Column="1"
+                         Grid.Row="1"
                              x:Name="remainingTime"
                              IsEnabled="False"
                              Margin="2"/>
-                </Grid>
-                <StackPanel Orientation="Vertical"
-                            Grid.Row="6">
-                    <ProgressBar x:Name="testProgress"
+
+                <ProgressBar x:Name="testProgress"
+                             Grid.Row="2"
+                             Grid.ColumnSpan="2"
                                  Height="15"
                                  Margin="2"
                                  IsIndeterminate="False"
                                  Value="0"/>
-                    <Button x:Name="stopTestButton"
+                <Button x:Name="stopTestButton"
                             Margin="2"
+                        Grid.Row="3"
+                        Grid.ColumnSpan="2"
                             Content="STOP TEST"
                             Click="stopTestButton_Click"
                             FontWeight="Bold"
                             Foreground="Red"/>
-                </StackPanel>
             </Grid>
         </GroupBox>
+
+
         <!--Bottom logging panel-->
-        <GroupBox Grid.Row="2"
+        <GroupBox Grid.Row="4"
                   Header="Logging">
             <Grid>
                 <Button x:Name="saveButton"

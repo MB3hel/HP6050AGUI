@@ -64,6 +64,11 @@ namespace HP6050AGUI {
             return double.Parse(read());
         }
 
+        public int channelCount() {
+            write("CHAN! MAX");
+            return int.Parse(read());
+        }
+
         /// <summary>
         /// Checks if the session is currently open.
         /// </summary>
@@ -76,7 +81,7 @@ namespace HP6050AGUI {
         /// Checks if the session has been opened.
         /// </summary>
         /// <returns>True if the session has been opened (even if it is now disposed).</returns>
-        protected bool hasBeenOpened() {
+        public bool hasBeenOpened() {
             return mbSession != null;
         }
 

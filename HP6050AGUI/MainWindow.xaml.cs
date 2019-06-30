@@ -2,6 +2,9 @@
 using NationalInstruments.Visa;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -36,16 +39,34 @@ namespace HP6050AGUI {
             public double[] measuredCurrents { get; private set; }
         }
 
-        List<DataPoint> testResults = new List<DataPoint>();
+        const string HEADER_CHANNEL = "Channel";
+        const string HEADER_VOLTAGE = "Voltage (V)";
+        const string HEADER_CURRENT = "Current (A)";
+        const string HEADER_BATNAME = "Battery Name";
 
+        public class BatteryEntry {
+            public int channel { get; set; }
+            public double voltage { get; set; }
+            public double current { get; set; }
+            public string batteryName { get; set; }
+        }
+
+        List<DataPoint> testResults = new List<DataPoint>();
+        List<BatteryEntry> batteryEntries = new List<BatteryEntry>();
+
+        
+        int channelCount;
+        int testChannelCount = 0;
         string endReason = "";
         bool userCanceledTest = false;
         string lastResourceString;
         string currentTestName = "";
-        MessageBasedSession mbSession;
+        ElectronicLoad tester = new ElectronicLoad();
 
         public MainWindow() {
             InitializeComponent();
+
+            batteryDataGrid.ItemsSource = batteryEntries;
             setControlState(false);
             ControlWriter writer = new ControlWriter(this, output);
             Console.SetOut(writer);
@@ -69,7 +90,7 @@ namespace HP6050AGUI {
                 using(var rmSession = new ResourceManager()) {
                     try {
                         Console.WriteLine("Opening " + d.ResourceName);
-                        mbSession = (MessageBasedSession)rmSession.Open(d.ResourceName);
+                        tester.open(d.ResourceName);
                         setControlState(true);
                     } catch (InvalidCastException) {
                         string message = "Resource selected must be a message-based session";
@@ -86,9 +107,10 @@ namespace HP6050AGUI {
         }
 
         private void closeSession_Click(object sender, RoutedEventArgs e) {
+            bool wasOpen = tester.hasBeenOpened();
             setControlState(false);
-            mbSession.Dispose();
-            if(mbSession != null && !mbSession.IsDisposed)
+            tester.close();
+            if(wasOpen)
                 Console.WriteLine("Closing session...");
         }
 
@@ -109,7 +131,7 @@ namespace HP6050AGUI {
 
             // EDIT THESE LINES
             currentTestName = "Quick Test";
-            await startBatteryTest(10, 1, 0.5, 10000);
+            await startBatteryTest(10, 0.5, 10000);
 
 
             Console.WriteLine("Test completed.");
@@ -133,7 +155,7 @@ namespace HP6050AGUI {
 
             // EDIT THESE LINES
             currentTestName = "10A Test";
-            await startBatteryTest(11.95, 1, 10, 3600 * 1000);
+            await startBatteryTest(11.95, 10, 3600 * 1000);
 
 
             Console.WriteLine("Test completed.");
@@ -157,7 +179,7 @@ namespace HP6050AGUI {
 
             // EDIT THESE LINES
             currentTestName = "18A Test";
-            await startBatteryTest(11.95, 1, 18, 3600 * 1000);
+            await startBatteryTest(11.95, 18, 3600 * 1000);
 
 
             Console.WriteLine("Test completed.");
@@ -196,66 +218,60 @@ namespace HP6050AGUI {
         /// <param name="eodVoltage">End of discharge voltage for a single cell</param>
         /// <param name="cellCount">The number of cells to be discharged in series</param>
         /// <param name="dischargeRate">Constant current dicharge rate in amps</param>
-        public async Task startBatteryTest(double eodVoltage, int cellCount, double dischargeRate, long maxTimeMs = -1) {
+        public async Task startBatteryTest(double eodVoltage, double dischargeRate, long maxTimeMs = -1) {
             testResults.Clear();
             await Task.Run(() => {
-                // Newlines may be needed after each command???
-                mbSession.RawIO.Write("CHANNEL 1");
-                mbSession.RawIO.Write("INPUT OFF");
-                mbSession.RawIO.Write("MODE:CURRENT");
-                mbSession.RawIO.Write("CURR " + (dischargeRate * 1000) + "MA");
-                mbSession.RawIO.Write("CHANNEL 2");
-                mbSession.RawIO.Write("INPUT OFF");
-                mbSession.RawIO.Write("MODE:CURRENT");
-                mbSession.RawIO.Write("CURR " + (dischargeRate * 1000) + "MA");
-                mbSession.RawIO.Write("CHANNEL 3");
-                mbSession.RawIO.Write("INPUT OFF");
-                mbSession.RawIO.Write("MODE:CURRENT");
-                mbSession.RawIO.Write("CURR " + (dischargeRate * 1000) + "MA");
 
-                mbSession.RawIO.Write("CHANNEL 1");
-                mbSession.RawIO.Write("INPUT ON");
-                mbSession.RawIO.Write("CHANNEL 2");
-                mbSession.RawIO.Write("INPUT ON");
-                mbSession.RawIO.Write("CHANNEL 3");
-                mbSession.RawIO.Write("INPUT ON");
+                // Setup data table
+                Dispatcher.Invoke(() => {
+                    batteryEntries.Clear();
+                    channelCount = tester.channelCount();
+                    for (int i = 1; i <= channelCount; ++i) {
+                        batteryEntries.Add(new BatteryEntry() { channel = i, voltage = 0, current = 0, batteryName = "" });
+                    }
+                });
+
+                // Setup all inputs and turn on
+                for(int i = 1; i <= channelCount; ++i) {
+                    tester.inputOff(i);
+                    tester.setCurrent(i, (int)(dischargeRate * 1000));
+                    tester.inputOn(i);
+                }
 
                 // Start timing
                 Stopwatch stopWatch = new Stopwatch();
                 stopWatch.Start();
-                double[] measuredVoltages = { 0, 0, 0 };
-                double[] measuredCurrents = { 0, 0, 0 };
-                bool[] offInputs = new bool[] { false, false, false };
+                double[] measuredVoltages = new double[channelCount];
+                double[] measuredCurrents = new double[channelCount];
+                bool[] offInputs = new bool[channelCount];
+
+                for(int i = 0; i < channelCount; ++i) {
+                    measuredVoltages[i] = 0;
+                    measuredCurrents[i] = 0;
+                    offInputs[i] = false;
+                }
+
                 bool shouldEnd = false;
                 bool timedOut = false;
                 do {
-                    this.Dispatcher.Invoke(() => {
+                    Dispatcher.Invoke(() => {
                         testProgress.IsIndeterminate = true;
                     });
                     try {
 
-                        for (int i = 1; i <= 3; ++i) {
-                            // Switch channel
-                            mbSession.RawIO.Write("CHANNEL " + i);
-
-                            // Read voltage
-                            mbSession.RawIO.Write("MEASURE:VOLTAGE?");
-                            measuredVoltages[i - 1] = Double.Parse(mbSession.RawIO.ReadString());
-                            // Read actual current
-                            mbSession.RawIO.Write("MEASURE:CURRENT?");
-                            measuredCurrents[i - 1] = Double.Parse(mbSession.RawIO.ReadString());
+                        for (int i = 1; i <= channelCount; ++i) {
+                            measuredVoltages[i - 1] = tester.readVoltage(i);
+                            measuredCurrents[i - 1] = tester.readCurrent(i);
                         }
 
                         // Add the data to the list and to the UI
                         testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltages, measuredCurrents));
                         long elapsed = stopWatch.ElapsedMilliseconds;
-                        this.Dispatcher.Invoke(() => {
-                            voltageReading1.Text = measuredVoltages[0] + " V";
-                            voltageReading2.Text = measuredVoltages[1] + " V";
-                            voltageReading3.Text = measuredVoltages[2] + " V";
-                            currentReading1.Text = measuredCurrents[0] + " A";
-                            currentReading2.Text = measuredCurrents[1] + " A";
-                            currentReading3.Text = measuredCurrents[2] + " A";
+                        Dispatcher.Invoke(() => {
+                            for(int i = 1; i <= channelCount; ++i) {
+                                batteryEntries[i - 1].voltage = measuredVoltages[i - 1];
+                                batteryEntries[i - 1].current = measuredCurrents[i - 1];
+                            }
                             remainingTime.Text = "" + ((maxTimeMs - elapsed) / 1000.0);
                         });
                     } catch (Exception e) {
@@ -263,11 +279,10 @@ namespace HP6050AGUI {
                     }
 
                     // Turn off inputs for eod channels
-                    for(int i = 1; i <= 3; ++i) {
+                    for(int i = 1; i <= channelCount; ++i) {
                         if(!offInputs[i - 1]) {
-                            if (measuredVoltages[i - 1] < cellCount * eodVoltage) {
-                                mbSession.RawIO.Write("CHANNEL " + i);
-                                mbSession.RawIO.Write("INPUT OFF");
+                            if (measuredVoltages[i - 1] < eodVoltage) {
+                                tester.inputOff(i);
                                 offInputs[i - 1] = true;
                             }
                         }
@@ -278,21 +293,19 @@ namespace HP6050AGUI {
                         timedOut = stopWatch.ElapsedMilliseconds >= maxTimeMs;
                     shouldEnd = offInputs[0] && offInputs[1] && offInputs[2];
                 } while (!shouldEnd && !userCanceledTest && !timedOut);
+
                 if (userCanceledTest) {
                     endReason = "Canceled by user.";
                 } else if (timedOut) {
                     endReason = "Reached time limit.";
                 }else {
-                    endReason = "Reached end of discharge voltage.";
+                    endReason = "All channels reached end of discharge voltage.";
                 }
 
                 // Turn all inputs off
-                mbSession.RawIO.Write("CHANNEL 1");
-                mbSession.RawIO.Write("INPUT OFF");
-                mbSession.RawIO.Write("CHANNEL 2");
-                mbSession.RawIO.Write("INPUT OFF");
-                mbSession.RawIO.Write("CHANNEL 3");
-                mbSession.RawIO.Write("INPUT OFF");
+                for(int i = 1; i <= channelCount; ++i) {
+                    tester.inputOff(i);
+                }
 
                 this.Dispatcher.Invoke(() => {
                     testProgress.IsIndeterminate = false;
@@ -306,12 +319,27 @@ namespace HP6050AGUI {
             StreamWriter file = new StreamWriter(@filepath, append:false);
 
             // Add the headers
-            file.WriteLine(currentTestName + "," + name1.Text + "," + name1.Text + "," + name2.Text + "," + name2.Text + "," + name3.Text + "," + name3.Text);
-            file.WriteLine("Time (ms),Voltage1 (V),Current1 (A),Voltage2 (V),Current2 (A),Voltage3 (V),Current3 (A)");
+
+            string testInfoHeader = currentTestName + ",";
+            string mainHeader = "Time (ms),";
+            for(int i = 0; i < channelCount; ++i) {
+                testInfoHeader += batteryEntries[i].batteryName + "," + batteryEntries[i].batteryName + ",";
+                mainHeader += "Voltage" + (i + 1) + " (V),Current" + (i + 1) + " (A),";
+            }
+            testInfoHeader = testInfoHeader.Remove(testInfoHeader.Length - 1);
+            mainHeader = mainHeader.Remove(mainHeader.Length - 1);
+
+            file.WriteLine(testInfoHeader);
+            file.WriteLine(mainHeader);
 
             // Add each data point
-            foreach(DataPoint p in testResults) {
-                file.WriteLine(p.timeMs + "," + p.measuredVoltages[0] + "," + p.measuredCurrents[0] + "," + p.measuredVoltages[1] + "," + p.measuredCurrents[1] + "," + p.measuredVoltages[2] + "," + p.measuredCurrents[2]);
+            foreach (DataPoint p in testResults) {
+                string data = p.timeMs + ",";
+                for (int i = 0; i < channelCount; ++i) {
+                    data += batteryEntries[i].voltage + "," + batteryEntries[i].current + ",";
+                }
+                data = data.Remove(data.Length - 1);
+                file.WriteLine(data);
             }
 
             // Finish writing and close
