@@ -60,7 +60,7 @@ namespace HP6050AGUI {
 
         Dictionary<object, TestSettings> registeredTests = new Dictionary<object, TestSettings>();
         List<DataPoint> testResults = new List<DataPoint>();
-        List<BatteryEntry> batteryEntries = new List<BatteryEntry>();
+        ObservableCollection<BatteryEntry> batteryEntries = new ObservableCollection<BatteryEntry>();
 
         
         int channelCount;
@@ -72,6 +72,8 @@ namespace HP6050AGUI {
 
         public MainWindow() {
             InitializeComponent();
+
+            this.Closing += MainWindow_Closing;
 
             batteryDataGrid.ItemsSource = batteryEntries;
             setControlState(false);
@@ -98,6 +100,12 @@ namespace HP6050AGUI {
                 dischargeRateAmps = 18,
                 maxTimeSec = 3600
             });
+        }
+
+        private void MainWindow_Closing(object sender, CancelEventArgs e) {
+            for (int i = 1; i <= channelCount; ++i) {
+                tester.inputOff(i);
+            }
         }
 
         public void setControlState(bool isOpen) {
@@ -216,8 +224,13 @@ namespace HP6050AGUI {
             await Task.Run(() => {
 
                 try {
+
                     // Setup data table
                     Dispatcher.Invoke(() => {
+
+                        // Do not allow editing of battery names during the test
+                        batteryDataGrid.Columns[3].IsReadOnly = true;
+
                         batteryEntries.Clear();
                         channelCount = tester.channelCount();
                         for (int i = 1; i <= channelCount; ++i) {
@@ -257,6 +270,7 @@ namespace HP6050AGUI {
                                 measuredVoltages[i - 1] = tester.readVoltage(i);
                                 measuredCurrents[i - 1] = tester.readCurrent(i);
                             }
+                            Console.WriteLine("Current 0: " + measuredCurrents[0]);
 
                             // Add the data to the list and to the UI
                             testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltages, measuredCurrents));
@@ -269,7 +283,9 @@ namespace HP6050AGUI {
                                     batteryEntries[i - 1].voltage = measuredVoltages[i - 1];
                                     batteryEntries[i - 1].current = measuredCurrents[i - 1];
                                 }
+                                
                                 remainingTime.Text = "" + ((maxTimeMs - elapsed) / 1000.0);
+                                batteryDataGrid.Items.Refresh();
                             });
                         } catch (Exception e) {
                             Console.WriteLine("Error running test: " + e.Message);
@@ -313,9 +329,12 @@ namespace HP6050AGUI {
                 // Turn all inputs off
                 for (int i = 1; i <= channelCount; ++i) {
                     tester.inputOff(i);
-                }
+                }                
 
                 this.Dispatcher.Invoke(() => {
+                    // Allow editing of battery names after the test
+                    batteryDataGrid.Columns[3].IsReadOnly = false;
+
                     testProgress.IsIndeterminate = false;
                     testProgress.Value = 0;
                 });

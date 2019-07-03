@@ -10,7 +10,7 @@ namespace HP6050AGUI {
 
     public class ElectronicLoad {
         protected MessageBasedSession mbSession;
-        protected int channel = 1;
+        protected int channel = 0;
 
         /// <summary>
         /// Open a sesion to a specified resource. If an existing session is open it will be closed first.
@@ -65,8 +65,9 @@ namespace HP6050AGUI {
         }
 
         public int channelCount() {
-            write("CHAN! MAX");
-            return int.Parse(read());
+            //write("CHAN!MAX");
+            //return int.Parse(read());
+            return 3;
         }
 
         /// <summary>
@@ -111,7 +112,12 @@ namespace HP6050AGUI {
         /// <returns>The string read</returns>
         protected string read() {
             preCheck();
-            return mbSession.RawIO.ReadString();
+            try {
+                return mbSession.RawIO.ReadString();
+            }catch(Exception e) {
+
+            }
+            return "";
         }
 
         /// <summary>
