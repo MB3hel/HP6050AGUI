@@ -103,6 +103,7 @@ namespace HP6050AGUI {
         }
 
         private void MainWindow_Closing(object sender, CancelEventArgs e) {
+            userCanceledTest = true;
             for (int i = 1; i <= channelCount; ++i) {
                 tester.inputOff(i);
             }
@@ -222,122 +223,123 @@ namespace HP6050AGUI {
         public async Task startBatteryTest(double eodVoltage, double dischargeRate, long maxTimeMs = -1) {
             testResults.Clear();
             await Task.Run(() => {
+                lock (tester) {
+                    try {
 
-                try {
+                        // Setup data table
+                        Dispatcher.Invoke(() => {
 
-                    // Setup data table
-                    Dispatcher.Invoke(() => {
+                            // Do not allow editing of battery names during the test
+                            batteryDataGrid.Columns[3].IsReadOnly = true;
 
-                        // Do not allow editing of battery names during the test
-                        batteryDataGrid.Columns[3].IsReadOnly = true;
+                            batteryEntries.Clear();
+                            channelCount = tester.channelCount();
+                            for (int i = 1; i <= channelCount; ++i) {
+                                batteryEntries.Add(new BatteryEntry() { channel = i, voltage = 0, current = 0, batteryName = "" });
+                            }
+                        });
 
-                        batteryEntries.Clear();
-                        channelCount = tester.channelCount();
+                        // Setup all inputs and turn on
                         for (int i = 1; i <= channelCount; ++i) {
-                            batteryEntries.Add(new BatteryEntry() { channel = i, voltage = 0, current = 0, batteryName = "" });
+                            tester.inputOff(i);
+                            tester.setCurrent(i, (int)(dischargeRate * 1000));
+                            tester.inputOn(i);
                         }
-                    });
 
-                    // Setup all inputs and turn on
+                        // Start timing
+                        Stopwatch stopWatch = new Stopwatch();
+                        stopWatch.Start();
+                        double[] measuredVoltages = new double[channelCount];
+                        double[] measuredCurrents = new double[channelCount];
+                        bool[] offInputs = new bool[channelCount];
+
+                        for (int i = 0; i < channelCount; ++i) {
+                            measuredVoltages[i] = 0;
+                            measuredCurrents[i] = 0;
+                            offInputs[i] = false;
+                        }
+
+                        bool shouldEnd = false;
+                        bool timedOut = false;
+                        do {
+                            Dispatcher.InvokeAsync(() => {
+                                testProgress.IsIndeterminate = true;
+                            });
+                            try {
+
+                                for (int i = 1; i <= channelCount; ++i) {
+                                    measuredVoltages[i - 1] = tester.readVoltage(i);
+                                    measuredCurrents[i - 1] = tester.readCurrent(i);
+                                }
+                                Console.WriteLine("Current 0: " + measuredCurrents[0]);
+
+                                // Add the data to the list and to the UI
+                                testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltages, measuredCurrents));
+                                long elapsed = stopWatch.ElapsedMilliseconds;
+
+
+                                //TODO: May not need to do all of this from dispatcher. Would speed up samples
+                                Dispatcher.Invoke(() => {
+                                    for (int i = 1; i <= channelCount; ++i) {
+                                        batteryEntries[i - 1].voltage = measuredVoltages[i - 1];
+                                        batteryEntries[i - 1].current = measuredCurrents[i - 1];
+                                    }
+
+                                    remainingTime.Text = "" + ((maxTimeMs - elapsed) / 1000.0);
+                                    batteryDataGrid.Items.Refresh();
+                                });
+                            } catch (Exception e) {
+                                Console.WriteLine("Error running test: " + e.Message);
+                            }
+
+                            // Turn off inputs for eod channels
+                            for (int i = 1; i <= channelCount; ++i) {
+                                if (!offInputs[i - 1]) {
+                                    if (measuredVoltages[i - 1] < eodVoltage) {
+                                        tester.inputOff(i);
+                                        offInputs[i - 1] = true;
+                                    }
+                                }
+                            }
+
+                            // Stop conditions
+                            if (maxTimeMs > -1)
+                                timedOut = stopWatch.ElapsedMilliseconds >= maxTimeMs;
+
+                            shouldEnd = true;
+                            for (int i = 0; i < channelCount; ++i) {
+                                shouldEnd = shouldEnd && offInputs[i];
+                                if (!shouldEnd) break;
+                            }
+
+                        } while (!shouldEnd && !userCanceledTest && !timedOut);
+
+                        if (userCanceledTest) {
+                            endReason = "Canceled by user.";
+                        } else if (timedOut) {
+                            endReason = "Reached time limit.";
+                        } else {
+                            endReason = "All channels reached end of discharge voltage.";
+                        }
+                        stopWatch.Stop();
+
+                    } catch (Exception e) {
+                        endReason = "Exception occurred: " + e.Message;
+                    }
+
+                    // Turn all inputs off
                     for (int i = 1; i <= channelCount; ++i) {
                         tester.inputOff(i);
-                        tester.setCurrent(i, (int)(dischargeRate * 1000));
-                        tester.inputOn(i);
                     }
 
-                    // Start timing
-                    Stopwatch stopWatch = new Stopwatch();
-                    stopWatch.Start();
-                    double[] measuredVoltages = new double[channelCount];
-                    double[] measuredCurrents = new double[channelCount];
-                    bool[] offInputs = new bool[channelCount];
+                    this.Dispatcher.Invoke(() => {
+                        // Allow editing of battery names after the test
+                        batteryDataGrid.Columns[3].IsReadOnly = false;
 
-                    for (int i = 0; i < channelCount; ++i) {
-                        measuredVoltages[i] = 0;
-                        measuredCurrents[i] = 0;
-                        offInputs[i] = false;
-                    }
-
-                    bool shouldEnd = false;
-                    bool timedOut = false;
-                    do {
-                        Dispatcher.InvokeAsync(() => {
-                            testProgress.IsIndeterminate = true;
-                        });
-                        try {
-
-                            for (int i = 1; i <= channelCount; ++i) {
-                                measuredVoltages[i - 1] = tester.readVoltage(i);
-                                measuredCurrents[i - 1] = tester.readCurrent(i);
-                            }
-                            Console.WriteLine("Current 0: " + measuredCurrents[0]);
-
-                            // Add the data to the list and to the UI
-                            testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltages, measuredCurrents));
-                            long elapsed = stopWatch.ElapsedMilliseconds;
-
-
-                            //TODO: May not need to do all of this from dispatcher. Would speed up samples
-                            Dispatcher.Invoke(() => {
-                                for (int i = 1; i <= channelCount; ++i) {
-                                    batteryEntries[i - 1].voltage = measuredVoltages[i - 1];
-                                    batteryEntries[i - 1].current = measuredCurrents[i - 1];
-                                }
-                                
-                                remainingTime.Text = "" + ((maxTimeMs - elapsed) / 1000.0);
-                                batteryDataGrid.Items.Refresh();
-                            });
-                        } catch (Exception e) {
-                            Console.WriteLine("Error running test: " + e.Message);
-                        }
-
-                        // Turn off inputs for eod channels
-                        for (int i = 1; i <= channelCount; ++i) {
-                            if (!offInputs[i - 1]) {
-                                if (measuredVoltages[i - 1] < eodVoltage) {
-                                    tester.inputOff(i);
-                                    offInputs[i - 1] = true;
-                                }
-                            }
-                        }
-
-                        // Stop conditions
-                        if (maxTimeMs > -1)
-                            timedOut = stopWatch.ElapsedMilliseconds >= maxTimeMs;
-
-                        shouldEnd = true;
-                        for(int i = 0; i < channelCount; ++i) {
-                            shouldEnd = shouldEnd && offInputs[i];
-                            if (!shouldEnd) break;
-                        }
-
-                    } while (!shouldEnd && !userCanceledTest && !timedOut);
-
-                    if (userCanceledTest) {
-                        endReason = "Canceled by user.";
-                    } else if (timedOut) {
-                        endReason = "Reached time limit.";
-                    } else {
-                        endReason = "All channels reached end of discharge voltage.";
-                    }
-                    stopWatch.Stop();
-
-                } catch (Exception e) {
-                    endReason = "Exception occurred: " + e.Message;
+                        testProgress.IsIndeterminate = false;
+                        testProgress.Value = 0;
+                    });
                 }
-
-                // Turn all inputs off
-                for (int i = 1; i <= channelCount; ++i) {
-                    tester.inputOff(i);
-                }                
-
-                this.Dispatcher.Invoke(() => {
-                    // Allow editing of battery names after the test
-                    batteryDataGrid.Columns[3].IsReadOnly = false;
-
-                    testProgress.IsIndeterminate = false;
-                    testProgress.Value = 0;
-                });
             });
         }
 
