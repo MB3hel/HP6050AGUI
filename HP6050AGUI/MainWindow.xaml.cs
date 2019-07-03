@@ -29,14 +29,14 @@ namespace HP6050AGUI {
     public partial class MainWindow : Window {
 
         struct DataPoint {
-            public DataPoint(long timeMs, double[] measuredVoltages, double[] measuredCurrents) {
+            public DataPoint(long timeMs) {
                 this.timeMs = timeMs;
-                this.measuredVoltages = measuredVoltages;
-                this.measuredCurrents = measuredCurrents;
+                this.measuredVoltages = new double[0];
+                this.measuredCurrents = new double[0];
             }
-            public long timeMs { get; private set; }
-            public double[] measuredVoltages { get; private set; }
-            public double[] measuredCurrents { get; private set; }
+            public long timeMs { get; set; }
+            public double[] measuredVoltages { get; set; }
+            public double[] measuredCurrents { get; set; }
         }
 
         const string HEADER_CHANNEL = "Channel";
@@ -271,10 +271,14 @@ namespace HP6050AGUI {
                                     measuredVoltages[i - 1] = tester.readVoltage(i);
                                     measuredCurrents[i - 1] = tester.readCurrent(i);
                                 }
-                                Console.WriteLine("Current 0: " + measuredCurrents[0]);
 
                                 // Add the data to the list and to the UI
-                                testResults.Add(new DataPoint(stopWatch.ElapsedMilliseconds, measuredVoltages, measuredCurrents));
+                                DataPoint p = new DataPoint(stopWatch.ElapsedMilliseconds);
+                                p.measuredVoltages = new double[measuredVoltages.Length];
+                                p.measuredCurrents = new double[measuredCurrents.Length];
+                                Array.Copy(measuredVoltages, p.measuredVoltages, measuredVoltages.Length);
+                                Array.Copy(measuredCurrents, p.measuredCurrents, measuredCurrents.Length);
+                                testResults.Add(p);
                                 long elapsed = stopWatch.ElapsedMilliseconds;
 
 
@@ -364,8 +368,9 @@ namespace HP6050AGUI {
             foreach (DataPoint p in testResults) {
                 string data = p.timeMs + ",";
                 for (int i = 0; i < channelCount; ++i) {
-                    data += batteryEntries[i].voltage + "," + batteryEntries[i].current + ",";
+                    data += p.measuredVoltages[i] + "," + p.measuredCurrents[i] + ",";
                 }
+                Console.WriteLine(p.measuredVoltages[0] + "," + p.measuredCurrents[0]);
                 data = data.Remove(data.Length - 1);
                 file.WriteLine(data);
             }
