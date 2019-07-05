@@ -129,6 +129,12 @@ namespace HP6050AGUI {
                         Console.WriteLine("Opening " + d.ResourceName);
                         tester.open(d.ResourceName);
                         setControlState(true);
+
+                        batteryEntries.Clear();
+                        channelCount = tester.channelCount();
+                        for (int i = 1; i <= channelCount; ++i) {
+                            batteryEntries.Add(new BatteryEntry() { channel = i, voltage = 0, current = 0, batteryName = "" });
+                        }
                     } catch (InvalidCastException) {
                         string message = "Resource selected must be a message-based session";
                         string title = "Invalid Resource";
@@ -228,15 +234,8 @@ namespace HP6050AGUI {
 
                         // Setup data table
                         Dispatcher.Invoke(() => {
-
                             // Do not allow editing of battery names during the test
                             batteryDataGrid.Columns[3].IsReadOnly = true;
-
-                            batteryEntries.Clear();
-                            channelCount = tester.channelCount();
-                            for (int i = 1; i <= channelCount; ++i) {
-                                batteryEntries.Add(new BatteryEntry() { channel = i, voltage = 0, current = 0, batteryName = "" });
-                            }
                         });
 
                         // Setup all inputs and turn on
