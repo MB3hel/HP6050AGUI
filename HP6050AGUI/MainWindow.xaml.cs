@@ -59,10 +59,10 @@ namespace HP6050AGUI {
         }
 
         Dictionary<object, TestSettings> registeredTests = new Dictionary<object, TestSettings>();
-        List<DataPoint> testResults = new List<DataPoint>();
         ObservableCollection<BatteryEntry> batteryEntries = new ObservableCollection<BatteryEntry>();
 
-        
+        StreamWriter logFile;
+
         int channelCount;
         string endReason = "";
         bool userCanceledTest = false;
@@ -167,19 +167,36 @@ namespace HP6050AGUI {
                 Console.WriteLine("ATTEMPTED TO START UNKNOWN TEST!!! THIS SHOULD NOT BE POSSIBLE.");
                 return;
             }
-            
+
+            SaveFileDialog saveDialog = new SaveFileDialog();
+            saveDialog.FileName = "Log-" + DateTime.Now.ToString("MM_dd_yyyy_HH_mm_ss_tt");
+            saveDialog.DefaultExt = ".csv";
+            saveDialog.Filter = "CSV Files (.csv)|*.csv";
+            bool? res = saveDialog.ShowDialog();
+            if (res.GetValueOrDefault()) {
+
+                logFile = new StreamWriter(saveDialog.FileName, append: false);
+
+                // Write header
+                string testInfoHeader = currentTestName + ",";
+                string mainHeader = "Time (ms),";
+                for (int i = 0; i < channelCount; ++i) {
+                    testInfoHeader += batteryEntries[i].batteryName + "," + batteryEntries[i].batteryName + ",";
+                    mainHeader += "Voltage" + (i + 1) + " (V),Current" + (i + 1) + " (A),";
+                }
+                testInfoHeader = testInfoHeader.Remove(testInfoHeader.Length - 1);
+                mainHeader = mainHeader.Remove(mainHeader.Length - 1);
+
+                logFile.WriteLine(testInfoHeader);
+                logFile.WriteLine(mainHeader);
+            } else {
+                Console.WriteLine("Test aborted beofre starting.");
+                return;
+            }
+
             TestSettings settings = registeredTests[sender];
 
-            bool doTest = false;
-            if (testResults.Count > 0) {
-                var res = MessageBox.Show("Starting a new test will discard all unsaved data from the previous test. Are you sure you want to start a new test?",
-                    "Confirm Test",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-                doTest = (res == MessageBoxResult.Yes);
-            } else {
-                doTest = true;
-            }
+            
 
             userCanceledTest = false;
             currentTestName = settings.testName;
@@ -188,22 +205,6 @@ namespace HP6050AGUI {
             Console.WriteLine("Test completed.");
             Console.WriteLine(endReason);
             MessageBox.Show(endReason, "Test Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void saveButton_Click(object sender, RoutedEventArgs e) {
-           if(testResults.Count > 0) {
-                SaveFileDialog saveDialog = new SaveFileDialog();
-                saveDialog.FileName = "Log-" + DateTime.Now.ToString("MM_dd_yyyy_HH_mm_ss_tt");
-                saveDialog.DefaultExt = ".csv";
-                saveDialog.Filter = "CSV Files (.csv)|*.csv";
-                bool? res = saveDialog.ShowDialog();
-                if(res == true) {
-                    string filename = saveDialog.FileName;
-                    saveLogToCSV(filename);
-                }
-            } else {
-                MessageBox.Show("There is no test data to save.", "No Data", MessageBoxButton.OK, MessageBoxImage.Exclamation);
-            }
         }
 
         private void stopTestButton_Click(object sender, RoutedEventArgs e) {
@@ -221,7 +222,6 @@ namespace HP6050AGUI {
         /// <param name="cellCount">The number of cells to be discharged in series</param>
         /// <param name="dischargeRate">Constant current dicharge rate in amps</param>
         public async Task startBatteryTest(double eodVoltage, double dischargeRate, long maxTimeMs = -1) {
-            testResults.Clear();
             await Task.Run(() => {
                 lock (tester) {
                     try {
@@ -270,25 +270,23 @@ namespace HP6050AGUI {
                                 for (int i = 1; i <= channelCount; ++i) {
                                     measuredVoltages[i - 1] = tester.readVoltage(i);
                                     measuredCurrents[i - 1] = tester.readCurrent(i);
+                                    batteryEntries[i - 1].voltage = measuredVoltages[i - 1];
+                                    batteryEntries[i - 1].current = measuredCurrents[i - 1];
                                 }
 
-                                // Add the data to the list and to the UI
-                                DataPoint p = new DataPoint(stopWatch.ElapsedMilliseconds);
-                                p.measuredVoltages = new double[measuredVoltages.Length];
-                                p.measuredCurrents = new double[measuredCurrents.Length];
-                                Array.Copy(measuredVoltages, p.measuredVoltages, measuredVoltages.Length);
-                                Array.Copy(measuredCurrents, p.measuredCurrents, measuredCurrents.Length);
-                                testResults.Add(p);
+                                // Log the sample
+                                string data = stopWatch.ElapsedMilliseconds + ",";
+                                for (int i = 0; i < channelCount; ++i) {
+                                    data += measuredVoltages[i] + "," + measuredCurrents[i] + ",";
+                                }
+                                data = data.Remove(data.Length - 1);
+                                logFile.WriteLine(data);
+
                                 long elapsed = stopWatch.ElapsedMilliseconds;
 
 
                                 //TODO: May not need to do all of this from dispatcher. Would speed up samples
-                                Dispatcher.Invoke(() => {
-                                    for (int i = 1; i <= channelCount; ++i) {
-                                        batteryEntries[i - 1].voltage = measuredVoltages[i - 1];
-                                        batteryEntries[i - 1].current = measuredCurrents[i - 1];
-                                    }
-
+                                Dispatcher.InvokeAsync(() => {
                                     remainingTime.Text = "" + ((maxTimeMs - elapsed) / 1000.0);
                                     batteryDataGrid.Items.Refresh();
                                 });
@@ -343,41 +341,10 @@ namespace HP6050AGUI {
                         testProgress.IsIndeterminate = false;
                         testProgress.Value = 0;
                     });
+
+                    logFile.Close();
                 }
             });
-        }
-
-        public void saveLogToCSV(string filepath) {
-            StreamWriter file = new StreamWriter(@filepath, append:false);
-
-            // Add the headers
-
-            string testInfoHeader = currentTestName + ",";
-            string mainHeader = "Time (ms),";
-            for(int i = 0; i < channelCount; ++i) {
-                testInfoHeader += batteryEntries[i].batteryName + "," + batteryEntries[i].batteryName + ",";
-                mainHeader += "Voltage" + (i + 1) + " (V),Current" + (i + 1) + " (A),";
-            }
-            testInfoHeader = testInfoHeader.Remove(testInfoHeader.Length - 1);
-            mainHeader = mainHeader.Remove(mainHeader.Length - 1);
-
-            file.WriteLine(testInfoHeader);
-            file.WriteLine(mainHeader);
-
-            // Add each data point
-            foreach (DataPoint p in testResults) {
-                string data = p.timeMs + ",";
-                for (int i = 0; i < channelCount; ++i) {
-                    data += p.measuredVoltages[i] + "," + p.measuredCurrents[i] + ",";
-                }
-                Console.WriteLine(p.measuredVoltages[0] + "," + p.measuredCurrents[0]);
-                data = data.Remove(data.Length - 1);
-                file.WriteLine(data);
-            }
-
-            // Finish writing and close
-            file.Flush();
-            file.Close();
         }
 
     }

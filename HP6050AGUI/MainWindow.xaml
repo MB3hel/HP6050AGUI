@@ -103,7 +103,7 @@
                     </DataGrid.Columns>
 
                 </DataGrid>
-                
+
                 <Label FontWeight="Bold"
                            Grid.Column="0"
                            Grid.Row="1"
@@ -131,18 +131,6 @@
                             Click="stopTestButton_Click"
                             FontWeight="Bold"
                             Foreground="Red"/>
-            </Grid>
-        </GroupBox>
-
-
-        <!--Bottom logging panel-->
-        <GroupBox Grid.Row="4"
-                  Header="Logging">
-            <Grid>
-                <Button x:Name="saveButton"
-                        Content="Save test log"
-                        Click="saveButton_Click"
-                        Margin="2"/>
             </Grid>
         </GroupBox>
     </Grid>
