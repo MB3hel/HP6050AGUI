@@ -67,7 +67,6 @@ namespace HP6050AGUI {
         string endReason = "";
         bool userCanceledTest = false;
         string lastResourceString;
-        string currentTestName = "";
         ElectronicLoad tester = new ElectronicLoad();
 
         public MainWindow() {
@@ -174,6 +173,8 @@ namespace HP6050AGUI {
                 return;
             }
 
+            TestSettings settings = registeredTests[sender];
+
             SaveFileDialog saveDialog = new SaveFileDialog();
             saveDialog.FileName = "Log-" + DateTime.Now.ToString("MM_dd_yyyy_HH_mm_ss_tt");
             saveDialog.DefaultExt = ".csv";
@@ -184,7 +185,7 @@ namespace HP6050AGUI {
                 logFile = new StreamWriter(saveDialog.FileName, append: false);
 
                 // Write header
-                string testInfoHeader = currentTestName + ",";
+                string testInfoHeader = settings.testName + ",";
                 string mainHeader = "Time (ms),";
                 for (int i = 0; i < channelCount; ++i) {
                     testInfoHeader += batteryEntries[i].batteryName + "," + batteryEntries[i].batteryName + ",";
@@ -198,14 +199,9 @@ namespace HP6050AGUI {
             } else {
                 Console.WriteLine("Test aborted beofre starting.");
                 return;
-            }
-
-            TestSettings settings = registeredTests[sender];
-
-            
+            }            
 
             userCanceledTest = false;
-            currentTestName = settings.testName;
             await startBatteryTest(settings.eodVoltage, settings.dischargeRateAmps, settings.maxTimeSec * 1000);
 
             Console.WriteLine("Test completed.");
