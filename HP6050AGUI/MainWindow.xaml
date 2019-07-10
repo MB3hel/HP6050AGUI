@@ -37,8 +37,9 @@
         <!--Message output box-->
         <GroupBox Grid.Row="1"
                           Header="Messages">
-            <TextBox IsEnabled="False"
-                             x:Name="output"/>
+            <TextBox IsEnabled="True"
+                     x:Name="output"
+                     VerticalScrollBarVisibility="Visible"/>
         </GroupBox>
 
         <!--Tests Panel-->

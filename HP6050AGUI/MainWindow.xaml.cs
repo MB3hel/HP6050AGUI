@@ -56,6 +56,7 @@ namespace HP6050AGUI {
             public double eodVoltage { get; set; }
             public double dischargeRateAmps { get; set; }
             public long maxTimeSec { get; set; }
+            public int numAverages { get; set; }
         }
 
         Dictionary<object, TestSettings> registeredTests = new Dictionary<object, TestSettings>();
@@ -83,21 +84,24 @@ namespace HP6050AGUI {
             // Setup tests here
             createTest(new TestSettings() {
                 testName = "Quick Test",
-                eodVoltage = 11.95,
+                eodVoltage = 11.75,
+                numAverages = 10,
                 dischargeRateAmps = 0.5,
                 maxTimeSec = 10
             });
             createTest(new TestSettings() {
                 testName = "10A Test",
-                eodVoltage = 11.95,
+                eodVoltage = 11.75,
+                numAverages = 10,
                 dischargeRateAmps = 10,
                 maxTimeSec = 5400   // 1.5 hrs
             });
             createTest(new TestSettings() {
                 testName = "18A Test",
-                eodVoltage = 11.95,
+                eodVoltage = 11.75,
+                numAverages = 10,
                 dischargeRateAmps = 18,
-                maxTimeSec = 3600
+                maxTimeSec = 3600   // 1.0 hrs
             });
         }
 
@@ -202,7 +206,7 @@ namespace HP6050AGUI {
             }            
 
             userCanceledTest = false;
-            await startBatteryTest(settings.eodVoltage, settings.dischargeRateAmps, settings.maxTimeSec * 1000);
+            await startBatteryTest(settings.eodVoltage, settings.dischargeRateAmps, settings.numAverages, settings.maxTimeSec * 1000);
 
             Console.WriteLine("Test completed.");
             Console.WriteLine(endReason);
@@ -223,7 +227,7 @@ namespace HP6050AGUI {
         /// <param name="eodVoltage">End of discharge voltage for a single cell</param>
         /// <param name="cellCount">The number of cells to be discharged in series</param>
         /// <param name="dischargeRate">Constant current dicharge rate in amps</param>
-        public async Task startBatteryTest(double eodVoltage, double dischargeRate, long maxTimeMs = -1) {
+        public async Task startBatteryTest(double eodVoltage, double dischargeRate, int numAverages, long maxTimeMs = -1) {
             await Task.Run(() => {
                 lock (tester) {
                     try {
@@ -246,16 +250,25 @@ namespace HP6050AGUI {
                         stopWatch.Start();
                         double[] measuredVoltages = new double[channelCount];
                         double[] measuredCurrents = new double[channelCount];
+                        double[,] averageList = new double[channelCount, numAverages];
+                        double[] voltageAvg = new double[channelCount];
                         bool[] offInputs = new bool[channelCount];
 
                         for (int i = 0; i < channelCount; ++i) {
                             measuredVoltages[i] = 0;
                             measuredCurrents[i] = 0;
-                            offInputs[i] = false;
+                            voltageAvg[i] = 0;
+                            offInputs[i] = false; 
+                            for (int j = 0; j < numAverages; ++j)
+                            {
+                                averageList[i, j] = 0;
+                            }
                         }
 
                         bool shouldEnd = false;
                         bool timedOut = false;
+                        int sampleCounter = 0;
+                        
                         do {
                             Dispatcher.InvokeAsync(() => {
                                 testProgress.IsIndeterminate = true;
@@ -267,6 +280,25 @@ namespace HP6050AGUI {
                                     measuredCurrents[i - 1] = tester.readCurrent(i);
                                     batteryEntries[i - 1].voltage = measuredVoltages[i - 1];
                                     batteryEntries[i - 1].current = measuredCurrents[i - 1];
+                                    if (sampleCounter < numAverages)
+                                    {
+                                        averageList[i - 1, sampleCounter] = measuredVoltages[i - 1];
+                                    }
+                                    else
+                                    {
+                                        // Copy data from temp array to working array while shifting existing data down one row
+                                        for (int j = numAverages; j > 0; --j)
+                                        {
+                                            if (j == 1)
+                                            {
+                                                averageList[i - 1, j - 1] = measuredVoltages[i - 1];
+                                            }
+                                            else
+                                            {
+                                                averageList[i - 1, j - 1] = averageList[i - 1, j - 2];
+                                            }
+                                        }
+                                    }
                                 }
 
                                 // Log the sample
@@ -291,13 +323,32 @@ namespace HP6050AGUI {
 
                             // Turn off inputs for eod channels
                             for (int i = 1; i <= channelCount; ++i) {
+                                if (sampleCounter < numAverages)
+                                {
+                                    for (int j = 0; j < sampleCounter + 1; ++j)
+                                    {
+                                        voltageAvg[i - 1] += averageList[i - 1, j];
+                                    }
+                                    voltageAvg[i - 1] /= sampleCounter + 1;
+                                }
+                                else
+                                {
+                                    for (int j = 0; j < numAverages; ++j)
+                                    {
+                                        voltageAvg[i - 1] += averageList[i - 1, j];
+                                    }
+                                    voltageAvg[i - 1] /= numAverages;
+                                }
                                 if (!offInputs[i - 1]) {
-                                    if (measuredVoltages[i - 1] < eodVoltage) {
+                                    if (voltageAvg[i - 1] < eodVoltage) {
                                         tester.inputOff(i);
                                         offInputs[i - 1] = true;
                                     }
                                 }
+                                voltageAvg[i - 1] = 0;
                             }
+
+                            ++sampleCounter;
 
                             // Stop conditions
                             if (maxTimeMs > -1)
