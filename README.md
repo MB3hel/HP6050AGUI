@@ -1,16 +1,15 @@
 # HP6050A GUI
 A simple GUI to run tests with a HP6050A Electronic load. 
 
-## Install Dependancies
+## Installation
 
-### NI VisaNS driver and .Net API
-The NI VisaNS driver is used to communicate with the electronic load via GPIB (or via an adapter).
+### Installing the GPIB to USB Adapter Driver
+- First connect the GPIB to USB adapter. The adapter must be connected before installing the driver.
+- The driver for the adapter is installed with the NI 488.2 package which can be downloaded from [NI's Website.](https://www.ni.com/en-us/support/downloads/drivers/download.ni-488-2.html). Version 19.0 has been tested. Other versions may or may not work.
 
-Install versions 19.0 of the following:
-------------------------------------------------------
-Must be installed to build:
-Install the NI-VISA C# (.NET) API from [here](https://www.ni.com/visa/). Install `NI-VISA .NET Development Support` and `NI-VISA .NET Runtime`. Other components are not required. Note: components selection will probably be the second window shown. First window installs NI Package Manager, which will have no component selection. Afterwards another window will be opened to install NI-VISA.
+### Installing the Tester GUI
+- Download the latest release form the releases tab of the github page.
+- Extract the zip and run the .exe file.
 
-Must be installed after connecting the GPIB to USB adapter
-Install the GPIB to USB adapter driver with the NI-488.2 package.
-http://www.ni.com/en-us/support/downloads/drivers/download.ni-488-2.html
+## Build Dependencies
+- The NI Visa NS library is used to communicate with the device via the GPIB adapter. Install version 19.0 from [NI's Website](http://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.htm)
